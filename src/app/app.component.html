@@ -1,0 +1,19 @@
+<span id="gen"></span>
+<button (click)="toggleStopStart()">{{ isRunning ? 'Stop' : 'Start'}}</button>
+<button (click)="toggleMode()">
+  Mode: {{ mode }}
+  <ng-container *ngIf="mode === 'Insert Seed' && selectedSeed">
+  </ng-container>
+</button>
+<div class="content" role="main">
+  <canvas (pointerdown)="action($event, 'd')" (pointermove)="action($event)" (pointerup)="action($event, 'u')" id="canvas" [width]="gridWidth" [height]="gridHeight" style="border:1px solid #000000; display: inline-block">
+  </canvas>
+  <div style="display: inline-block; width: 100px;">
+    <button (click)="importRLE()">Import RLE</button>
+    <input id="rleData" type="text" />
+    Seeds ({{seeds.length}}):
+    <div *ngFor="let seed of seeds; let i = index">
+      <canvas (click)="selectSeed(seed)" [style.borderWidth]="selectedSeed === seed ? '1px' : '0px'" style="border: 1px solid black;" [width]="seed.x * 5" [height]="seed.y * 5" [id]="'seed' + i"></canvas>
+    </div>
+  </div>
+</div>
