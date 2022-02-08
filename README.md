@@ -1,2 +1,2 @@
-# gol-playground
+# GOL playground
 Fun with game of life
