@@ -23,8 +23,8 @@
 // Autres idées: multiplexing dans un HASH.
 
 import { AfterViewInit, Component, OnInit } from '@angular/core';
-import { GlHelper } from './gl';
-
+import { GlHelper } from './gl-helper';
+import { RLETools } from './rle-tools';
 interface Seed {
   rle: string,
   x: number,
@@ -118,20 +118,6 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.mode = nextMode >= this.modes.length ? this.modes[0] : this.modes[nextMode];
   }
 
-  importRLE(): void {
-    const rleData = document.querySelector('#rleData') as HTMLInputElement;
-    const rle = rleData.value.replace(/6o/g, 'oooooo')
-    .replace(/5o/g, 'ooooo')
-    .replace(/4o/g, 'oooo')
-    .replace(/3o/g, 'ooo')
-    .replace(/2o/g, 'oo')
-    .replace(/6b/g, 'bbbbbb')
-    .replace(/5b/g, 'bbbbb')
-    .replace(/4b/g, 'bbbb')
-    .replace(/3b/g, 'bbb')
-    .replace(/2b/g, 'bb');
-  }
-
   captureSeedStart?: { x: number, y: number };
   captureSeedEnd?: { x: number, y: number };
   selectedSeed?: Seed;
@@ -152,7 +138,6 @@ export class AppComponent implements OnInit, AfterViewInit {
               this.nextGrid[sx + x][sy + y] = data[sy][sx];
             }
           }
-          console.log(data);
           this.draw();
         }
 
@@ -184,63 +169,24 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   captureSeed(): void {
-    const capture: string[][] = [];
-    let top = 999999, left = 999999, right = -999999, bottom = -999999;
-    for (let i = this.captureSeedStart.x; i < this.captureSeedEnd.x; i++) {
-      for (let j = this.captureSeedStart.y; j < this.captureSeedEnd.y; j++) {
-          let x = i - this.captureSeedStart.x;
-          let y = j - this.captureSeedStart.y;
-          if (!capture[y]) { capture[y] = new Array(); }
-          const live = this.grid[i][j];
-          capture[y][x] = live ? "o" : "b";
-          if (live) {
-            left = Math.min(left, x);
-            right = Math.max(right, x);
-            top = Math.min(top, y);
-            bottom = Math.max(bottom, y);
-          }
-      }
-    }
-
-    const croppedCapture: string[][] = [];
-    for (let i = left; i <= right; i++) {
-      for (let j = top; j <= bottom; j++) {
-        if (!croppedCapture[j-top]) { croppedCapture[j-top] = new Array(); }
-          croppedCapture[j-top][i - left] = capture[j][i];
-      }
-    }
-
-    const rebuiltArr = croppedCapture.map(line => [...line].map(c => c === 'o' ? true : false));
-    const rle = croppedCapture.map(line => {
-      return line.join('')
-        .replace(/oooooo/g, '6o')
-        .replace(/ooooo/g, '5o')
-        .replace(/oooo/g, '4o')
-        .replace(/ooo/g, '3o')
-        .replace(/oo/g, '2o')
-        .replace(/bbbbbb/g, '6b')
-        .replace(/bbbbb/g, '5b')
-        .replace(/bbbb/g, '4b')
-        .replace(/bbb/g, '3b')
-        .replace(/bb/g, '2b')
-    }).join('$');
-    const obj = {
-      rle: rle,
-      x: rebuiltArr[0].length,
-      y: rebuiltArr.length,
-      data: rebuiltArr
-    };
-    if (obj.x * obj.y < 6) {
+    if (!this.captureSeedStart || !this.captureSeedEnd) {
       return;
     }
 
-    this.seeds = JSON.parse(localStorage.getItem('seeds'));
-    this.seeds = this.seeds || [];
-    this.seeds.push(obj);
+    const rle = RLETools.convertGridCaptureToRle(this.grid, this.captureSeedStart.x, this.captureSeedStart.y, this.captureSeedEnd.x, this.captureSeedEnd.y)
+    this.seeds = JSON.parse(localStorage.getItem('seeds')) || [];
+    this.seeds.push(rle);
     localStorage.setItem('seeds', JSON.stringify(this.seeds));
-    setTimeout(() => {
-      this.updateSeedCanvas();      
-    }, 100);
+    setTimeout(() => this.updateSeedCanvas(), 100);
+  }
+
+  importRLE(): void {
+    const rleData = document.querySelector('#rleData') as HTMLInputElement;
+    const rle = RLETools.importRLE(rleData.value);
+    this.seeds = JSON.parse(localStorage.getItem('seeds')) || [];
+    this.seeds.push(rle);
+    localStorage.setItem('seeds', JSON.stringify(this.seeds));
+    setTimeout(() => this.updateSeedCanvas(), 100);
   }
 
   selectSeed(seed: Seed): void {
