@@ -18,7 +18,7 @@ export class GlHelper {
         void main() {
         gl_Position = vec4( aPosition, 1.0, 1.0 );
         vColor = aColor;
-        gl_PointSize = 4.0;
+        gl_PointSize = 1.0;
         }
         `;
 
@@ -46,19 +46,17 @@ export class GlHelper {
 
         this.buffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer);
-
     }
 
     buffer: WebGLBuffer;
 
     drawPoints(points: boolean[][], width: number, height: number) {
 
-        this.gl.clearColor(0.5, 0.5, 1, 1);
+        this.gl.clearColor(1, 1, 1, 1);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
         // Create points datas
         // ===================
-
 
         var size = width * height;
 
@@ -67,12 +65,15 @@ export class GlHelper {
         let i = 0;
         for (let x = 0; x < width; x++) {
             for (let y = 0; y < height; y++) {
-                let j = i * 5;
-                data[j + 0] = -1 + (x / width * 2);
-                data[j + 1] = 1 - (y / height * 2);
-                data[j + 2] = points[x][y] ? 0 : 1; // r
-                data[j + 3] = points[x][y] ? 0 : 1; // g
-                data[j + 4] = points[x][y] ? 0 : 1; // b
+                const live = points[x][y];
+                if (live) {
+                    let j = i * 5;
+                    data[j + 0] = -1 + (x / width * 2);
+                    data[j + 1] = 1 - (y / height * 2);
+                    data[j + 2] = live ? 0 : 1; // r
+                    data[j + 3] = live ? 0 : 1; // g
+                    data[j + 4] = live ? 0 : 1; // b
+                }
                 i++;
             }
         }
@@ -87,6 +88,36 @@ export class GlHelper {
         this.gl.vertexAttribPointer(aPos, 2, this.gl.FLOAT, false, 5 * 4, 0);
 
         let aCol = this.gl.getAttribLocation(this.program, 'aColor');
+        this.gl.enableVertexAttribArray(aCol);
+        this.gl.vertexAttribPointer(aCol, 3, this.gl.FLOAT, false, 5 * 4, 2 * 4);
+
+        // Draw
+        // ===================
+        this.gl.drawArrays(this.gl.POINTS, 0, size);
+    }
+
+    ss = 0;
+    drawHash(data: Float32Array, width: number, height: number) {
+
+        const size = width * height;
+
+        this.gl.clearColor(1, 1, 1, 1);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+        // Setup ArrayBuffer
+        // ===================
+
+        if (this.ss % 100 == 50) {
+            console.log(JSON.stringify(data.slice(0, 200)));
+        }
+
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, data, this.gl.STATIC_DRAW);
+
+        const aPos = this.gl.getAttribLocation(this.program, 'aPosition');
+        this.gl.enableVertexAttribArray(aPos);
+        this.gl.vertexAttribPointer(aPos, 2, this.gl.FLOAT, false, 5 * 4, 0);
+
+        const aCol = this.gl.getAttribLocation(this.program, 'aColor');
         this.gl.enableVertexAttribArray(aCol);
         this.gl.vertexAttribPointer(aCol, 3, this.gl.FLOAT, false, 5 * 4, 2 * 4);
 

@@ -6,7 +6,7 @@
   </ng-container>
 </button>
 <div class="content" role="main">
-  <canvas (pointerdown)="action($event, 'd')" (pointermove)="action($event)" (pointerup)="action($event, 'u')" id="canvas" [width]="gridWidth" [height]="gridHeight" style="border:1px solid #000000; display: inline-block">
+  <canvas (pointerdown)="action($event, 'd')" (pointermove)="action($event)" (pointerup)="action($event, 'u')" id="canvas" [width]="gridWidth" [height]="gridHeight">
   </canvas>
   <div style="display: inline-block; width: 100px;">
     <button (click)="importRLE()">Import RLE</button>

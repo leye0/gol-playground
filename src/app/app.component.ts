@@ -9,14 +9,14 @@
 // When walking through cells, have condition that says "This cell is necessarily alive because x,y,z so we skip check"
 // Ex: some random number like #45 would mean "I'm a cell surrounded on NW, N, NE by alive cells".
 // Information that would allow knowing that there are no neighbour in a radius of 10.
-// Maybe a Hash would do better than an array iteration
+// Maybe a Hash would do better than an array iteration
 // Techniquement, on pourrait simplement remonter le hash des alive cells, et éliminer du hash les mortes.
 // Même avec un univers à moitié plein, on aurait beaucoup moins de données à traiter inutilement.
 
 // SetCells de départ (seed)
 // SetCell. 
 // live => hash.add(x,y) imageData.draw(black)
-// dead => hash.remove(x,y) imageData.draw(transparent)
+// dead => hash.remove(x,y) imageData.draw(transparent)
 // Si on peut remonter les cells comme un tree - ou conserver dans une partie du data la position relative du parent précédent ou même sa position cardinale -,
 // on pourrait arriver à un algo où on sait sans 8 ifs si on a des neighbours.
 
@@ -31,7 +31,6 @@ interface Seed {
   y: number,
   data: boolean[][]
 }
-
 
 @Component({
   selector: 'app-root',
@@ -48,6 +47,9 @@ export class AppComponent implements OnInit, AfterViewInit {
   gridHeight = 500;
   grid: boolean[][] = [];
   nextGrid: boolean[][] = [];
+
+  gridHash: Float32Array;
+  nextGridHash: Float32Array;
 
   seeds?: Seed[];
 
@@ -67,15 +69,16 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.genEl = document.querySelector('#gen');
     this.gl.setup(this.canvas);
 
+    this.gridHash = new Float32Array(this.gridWidth * this.gridHeight * 5);
+    this.nextGridHash = new Float32Array(this.gridWidth * this.gridHeight * 5);
+
     // Place the initial cells
     for (let i = 0; i < this.gridWidth; i++) {
       for (let j = 0; j < this.gridHeight; j++) {
         const live = Math.floor(Math.random() * 10) > 8;
-        this.setCell(i, j, live);
+        this.setCell(i, j, live, true, true);
       }
     }
-
-    this.nextGrid = this.grid;
     
     setTimeout(() => this.evolveAllCells(), 50);
   }
@@ -103,10 +106,35 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   nextGridStuff: any[] = [];
 
-  setCell(x: number, y: number, life: boolean = true): void {
-    this.grid[x] = this.grid[x] || new Array();
-    this.grid[x][y] = life;
+  setCell(x: number, y: number, live: boolean, updateCurrentGrid: boolean = true, updateNextGrid: boolean = false): void {
+    
+    if (updateCurrentGrid) {
+      this.grid[x] = this.grid[x] || new Array();
+      this.grid[x][y] = live;
+      this.setHashPointValue(this.gridHash, x, y, live);  
+    }
+    
+    // When evolving cell
+    // When pre-visualizing changes (add cell, insert seed, etc)
+    if (updateNextGrid) {
+      this.nextGrid[x] = this.nextGrid[x] || new Array();
+      this.nextGrid[x][y] = live;
+      this.setHashPointValue(this.nextGridHash, x, y, live);
+    }
   }
+
+  getHashPos = (x: number, y: number) => ((x * this.gridWidth) + y) * 5;
+
+  setHashPointValue(hash: Float32Array, x: number, y: number, live: boolean): void {
+    const pos = this.getHashPos(x, y);
+    hash[pos + 0] = -1 + (x / this.gridWidth * 2);
+    hash[pos + 1] = 1 - (y / this.gridHeight * 2);
+    hash[pos + 2] = live ? 0 : 1; // r
+    hash[pos + 3] = live ? 0 : 1; // g
+    hash[pos + 4] = live ? 0 : 1; // b
+  }
+
+  getHashPointAlive = (hash: Float32Array, x: number, y: number) => hash[this.getHashPos(x, y) + 2] === 0;
 
   isRunning = true;
   toggleStopStart(): void {
@@ -134,8 +162,7 @@ export class AppComponent implements OnInit, AfterViewInit {
           const data = this.selectedSeed.data;
           for (let sx = 0; sx < this.selectedSeed.x; sx++) {
             for (let sy = 0; sy < this.selectedSeed.y; sy++) {
-              this.setCell(sx + x, sy + y, data[sy][sx]);
-              this.nextGrid[sx + x][sy + y] = data[sy][sx];
+              this.setCell(sx + x, sy + y, data[sy][sx], true, true);
             }
           }
           this.draw();
@@ -160,10 +187,9 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
     if (!action && !this.isInAction) { return; }
 
-    if (this.mode === 'Add' || this.mode === 'Invert' || this.mode === 'Remove') {
+    if (this.mode === 'Add' || this.mode === 'Invert' || this.mode === 'Remove') {
       const live = this.mode === 'Add' ? true : this.mode === 'Invert' ? !this.grid[x][y] : false;
-      this.setCell(x, y, live);
-      this.nextGrid[x][y] = live;
+      this.setCell(x, y, live, true, true);
       this.draw();
     }
   }
@@ -193,6 +219,8 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.selectedSeed = seed;
   }
 
+  _lastTime: number = performance.now();
+  _lastGen: number = 0;
   evolveAllCells(): void {
 
     // TODO: Here is the pattern that could be improved to be a tree-walking based pattern
@@ -204,21 +232,29 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     if (this.isRunning) {
-      this.grid = JSON.parse(JSON.stringify(this.nextGrid));
+      const now = performance.now();
+      const elapsed = (now - this._lastTime);
+      const fps = Math.round(1000 / elapsed); 
+
+      this.grid = JSON.parse(JSON.stringify(this.nextGrid)); // faster for now
+      this.gridHash = this.nextGridHash.slice(0); // JSON.parse(JSON.stringify(this.nextGridHash));
       this.draw();
-      this.genEl.innerText = (this.gen++).toString();
+      this.genEl.innerText = (this.gen++).toString() + ' GENS - ' + fps + ' FPS';
+      this._lastTime = now;
+      this._lastGen = this.gen;
     }
 
-    setTimeout(() => this.evolveAllCells(), 10);
+    setTimeout(() => this.evolveAllCells());
   }
 
   draw(): void {
-    this.gl.drawPoints(this.grid, this.gridWidth, this.gridHeight);
+    // this.gl.drawPoints(this.grid, this.gridWidth, this.gridHeight);
+    this.gl.drawHash(this.gridHash, this.gridWidth, this.gridHeight);
   }
 
   evolveCell(x: number, y: number): boolean {
     const liveNeighbours = this.getLiveNeighbours(x, y);
-    const isAlive = this.grid[x][y];
+    const isAlive = this.getHashPointAlive(this.gridHash, x, y); // this.grid[x][y];
     let nextLife = false;
     if (isAlive && (liveNeighbours === 2 || liveNeighbours === 3)) {
       nextLife = true;
@@ -226,7 +262,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     if (!isAlive && liveNeighbours === 3) {
       nextLife = true;
     }
-    this.nextGrid[x][y] = nextLife;
+    this.setCell(x, y, nextLife, false, true);
     return nextLife;
   }
 
