@@ -2,7 +2,7 @@ import { Rle } from './rle';
 
 export class RLETools {
 
-    static convertGridCaptureToRle(grid: boolean[][], x1: number, y1: number, x2: number, y2: number): Rle {
+    static convertCaptureToRle(gridHash: Float32Array, x1: number, y1: number, x2: number, y2: number, gridWidth: number): Rle {
         const capture: string[][] = [];
         let top = 999999, left = 999999, right = -999999, bottom = -999999;
         for (let i = x1; i < x2; i++) {
@@ -10,7 +10,7 @@ export class RLETools {
                 let x = i - x1;
                 let y = j - y1;
                 if (!capture[y]) { capture[y] = new Array(); }
-                const live = grid[i][j];
+                const live = RLETools.getHashPointAlive(gridHash, i, j, gridWidth);
                 capture[y][x] = live ? "o" : "b";
                 if (live) {
                     left = Math.min(left, x);
@@ -30,8 +30,14 @@ export class RLETools {
             }
         }
 
-        return this.convertBOBOBOToRLE(croppedCapture);
+        return RLETools.convertBOBOBOToRLE(croppedCapture);
     }
+
+    // Todo: Place it in a HashUniverse, something like that
+    //          
+    private static getHashPointAlive = (hash: Float32Array, x: number, y: number, gridWidth: number) => hash[RLETools.getHashPos(x, y, gridWidth) + 2] === 0;
+
+    private static getHashPos = (x: number, y: number, gridWidth: number) => ((x * gridWidth) + y) * 5;
 
     private static convertBOBOBOToRLE(data: string[][]): Rle {
         const rebuiltArr = data.map(line => [...line].map(c => c === 'o' ? true : false));

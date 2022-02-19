@@ -1,19 +1,31 @@
-<span id="gen"></span>
-<button (click)="toggleStopStart()">{{ isRunning ? 'Stop' : 'Start'}}</button>
-<button (click)="toggleMode()">
-  Mode: {{ mode }}
-  <ng-container *ngIf="mode === 'Insert Seed' && selectedSeed">
-  </ng-container>
-</button>
-<div class="content" role="main">
-  <canvas (pointerdown)="action($event, 'd')" (pointermove)="action($event)" (pointerup)="action($event, 'u')" id="canvas" [width]="gridWidth" [height]="gridHeight">
-  </canvas>
-  <div style="display: inline-block; width: 100px;">
-    <button (click)="importRLE()">Import RLE</button>
-    <input id="rleData" type="text" />
-    Seeds ({{seeds.length}}):
-    <div *ngFor="let seed of seeds; let i = index">
-      <canvas (click)="selectSeed(seed)" [style.borderWidth]="selectedSeed === seed ? '1px' : '0px'" style="border: 1px solid black;" [width]="seed.x * 5" [height]="seed.y * 5" [id]="'seed' + i"></canvas>
+<div class="flex-row">
+  <div class="tools-and-display flex-col">
+    <div class="tools">
+      <span id="gen"></span>
+      <button (click)="universe.toggleStopStart()">{{ universe.isRunning ? 'Stop' : 'Start'}}</button>
+      <button (click)="universe.toggleMode()">Mode: {{ universe?.mode }}</button>  
     </div>
+    <div class="canvas-display">
+      <div>
+        <canvas (pointerdown)="universe.action($event, 'd')" (pointermove)="universe.action($event)" (pointerup)="universe.action($event, 'u')" id="canvas" [width]="universe.width" [height]="universe.height"></canvas>
+      </div>
+      
+    </div>  
+  </div>
+  <div class="seeds-stuff flex-row">
+    <div id="seeds">
+      Seeds <span *ngIf="universe?.seeds?.length">({{universe?.seeds?.length}})</span>:
+      <button (click)="universe.importRLE()">Import RLE</button>
+      <input id="rleData" type="text" />
+      <ng-container *ngIf="universe?.seeds?.length">
+        <div *ngFor="let seed of universe.seeds; let i = index">
+          <canvas class="seed" [class.seed-selected]="universe.selectedSeed === seed" (click)="universe.selectSeed(seed)" [width]="seed.x * 3" [height]="seed.y * 3" [id]="'seed' + i"></canvas>
+        </div>  
+      </ng-container>
+    </div>
+  </div>
+  <div>
+    <button (click)="universe.left()">Left</button>
+    <button (click)="universe.right()">Right</button>
   </div>
 </div>

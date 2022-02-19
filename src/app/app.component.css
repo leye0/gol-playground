@@ -1,4 +1,24 @@
+.flex-row {
+    display: flex;
+    flex-direction: row;
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+.flow-col {
+    display: flex;
+    flex-direction: column;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
 #canvas {
     border:1px solid #000000;
-    display: inline-block
+}
+
+.seed {
+    border: 2px solid black;
+}
+.seed-selected {
+    border: 2px solid green;
 }
